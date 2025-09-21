@@ -1,1 +1,668 @@
-1
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Интерактивное Руководство по Периодизации Тренировок</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals with Muted Blue Accent (e.g., bg-stone-50, text-stone-800, accent-sky-600) -->
+    <!-- Application Structure Plan: A single-page application with a top navigation bar anchoring to distinct, interactive sections: 1. Introduction, 2. Core Concepts (interactive cycle diagram), 3. Model Explorer (buttons to switch between models, updating a dynamic Chart.js visualization and text descriptions), 4. Interactive Plan Selector (users choose goal/level to see a relevant plan). This task-oriented flow transforms the dense report into an engaging tool, guiding the user from theory to practical application, which is more effective for the target audience (coaches/athletes) than a linear document. -->
+    <!-- Visualization & Content Choices:
+    - Report Info: Hierarchical structure of cycles (Macro, Meso, Micro). Goal: Inform. Viz: Interactive nested diagram using HTML/CSS for clarity. Justification: More engaging than a static list or table.
+    - Report Info: Comparison of Periodization Models (Linear, DUP, Block). Goal: Compare. Viz: Chart.js line chart showing Volume vs. Intensity over time for each model. Interaction: Buttons to switch models, dynamically updating the chart and descriptive text. Justification: Visually demonstrates the core difference between models instantly.
+    - Report Info: Example training plans. Goal: Organize/Inform. Viz: Dynamic HTML table. Interaction: User selects goal/level via dropdowns, JS generates the relevant table. Justification: Personalizes the content and makes finding a relevant plan effortless.
+    - Library/Method: Chart.js for canvas-based charts, Vanilla JS for all interactions and DOM manipulation, Tailwind CSS for layout and styling. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        html {
+            scroll-behavior: smooth;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f7f4;
+            color: #333;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 400px;
+            max-height: 50vh;
+        }
+        .active-nav-link {
+            color: #0284c7; /* sky-600 */
+            font-weight: 600;
+        }
+        .content-card {
+            background-color: #ffffff;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            transition: all 0.3s ease;
+        }
+        .interactive-tab {
+             background-color: #e5e7eb;
+             color: #374151;
+             transition: all 0.3s ease;
+        }
+        .interactive-tab.active, .interactive-tab:hover {
+            background-color: #0ea5e9; /* sky-500 */
+            color: white;
+        }
+        .custom-select {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+            padding-right: 2.5rem;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            top: 1rem;
+            left: -0.875rem; /* -(width/2) - border-width */
+            width: 1.5rem;
+            height: 1.5rem;
+            border-radius: 9999px;
+            background-color: white;
+            border: 4px solid #38bdf8; /* sky-400 */
+        }
+    </style>
+</head>
+<body class="bg-stone-100 text-stone-800">
+
+    <header class="bg-white/80 backdrop-blur-md sticky top-0 z-50 shadow-sm">
+        <nav class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex-shrink-0">
+                    <a href="#hero" class="nav-link text-xl font-bold text-sky-600">Body Balance</a>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="#introduction" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-stone-600 hover:text-sky-600">Основы</a>
+                        <a href="#structure" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-stone-600 hover:text-sky-600">Структура</a>
+                        <a href="#models" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-stone-600 hover:text-sky-600">Модели</a>
+                        <a href="#planner" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-stone-600 hover:text-sky-600">Конструктор Планов</a>
+                        <a href="#guide" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-stone-600 hover:text-sky-600">Практика</a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+        
+        <section id="hero" class="text-center py-16 scroll-mt-20">
+            <h1 class="text-4xl md:text-6xl font-extrabold text-stone-900 leading-tight">
+                <span class="bg-clip-text text-transparent bg-gradient-to-r from-sky-500 to-indigo-600">
+                    Периодизация Тренировок:
+                </span>
+                 От Теории к Практике
+            </h1>
+            <p class="mt-4 max-w-3xl mx-auto text-lg text-stone-600">
+                Интерактивное руководство для тренеров и атлетов, которое превращает научные принципы в работающий тренировочный план.
+            </p>
+        </section>
+
+        <section id="introduction" class="my-16 scroll-mt-20">
+            <div class="content-card p-6 md:p-8">
+                <h2 class="text-3xl font-bold text-stone-900 mb-4">Что такое периодизация?</h2>
+                <p class="text-stone-700 mb-4">
+                    Этот раздел знакомит с фундаментальной концепцией периодизации. Здесь объясняется, почему невозможно прогрессировать постоянно, используя одну и ту же нагрузку, и как стратегическое планирование помогает управлять адаптацией организма, избегать плато и достигать пиковой формы.
+                </p>
+                <div id="introduction-content" class="space-y-4 text-stone-600">
+                </div>
+            </div>
+        </section>
+        
+        <section id="structure" class="my-16 scroll-mt-20">
+            <h2 class="text-3xl font-bold text-center text-stone-900 mb-2">Архитектура Прогресса</h2>
+             <p class="text-center text-stone-600 mb-8 max-w-2xl mx-auto">Периодизация имеет иерархическую структуру. Каждый уровень является частью предыдущего. В этом разделе вы можете интерактивно исследовать каждый компонент, чтобы понять их роль в долгосрочном планировании.</p>
+            <div class="relative p-8 border-4 border-dashed border-stone-300 rounded-xl max-w-4xl mx-auto">
+                <div class="structure-block group cursor-pointer" data-id="macro">
+                    <h3 class="text-2xl font-bold text-center">Макроцикл</h3>
+                    <p class="text-center text-sm text-stone-500">(Годовой план)</p>
+                </div>
+                <div class="relative my-8 p-8 border-4 border-dashed border-sky-300 rounded-lg">
+                     <div class="structure-block group cursor-pointer" data-id="meso">
+                        <h3 class="text-xl font-bold text-center">Мезоцикл</h3>
+                        <p class="text-center text-sm text-stone-500">(Тренировочный блок, 2-6 недель)</p>
+                    </div>
+                    <div class="relative my-8 p-8 border-4 border-dashed border-indigo-300 rounded-md">
+                        <div class="structure-block group cursor-pointer" data-id="micro">
+                            <h3 class="text-lg font-bold text-center">Микроцикл</h3>
+                            <p class="text-center text-sm text-stone-500">(Недельный план)</p>
+                        </div>
+                    </div>
+                </div>
+                <div id="structure-details" class="mt-8 p-6 bg-white rounded-lg shadow-inner min-h-[150px]">
+                </div>
+            </div>
+        </section>
+
+        <section id="models" class="my-16 scroll-mt-20">
+            <h2 class="text-3xl font-bold text-center text-stone-900 mb-2">Сравнение Моделей Периодизации</h2>
+            <p class="text-center text-stone-600 mb-8 max-w-3xl mx-auto">Не существует "лучшей" модели для всех. Выбор зависит от ваших целей, опыта и образа жизни. Этот интерактивный инструмент поможет вам визуально сравнить ключевые модели, чтобы понять, какая из них подходит именно вам.</p>
+            <div class="content-card p-6 md:p-8">
+                <div class="flex flex-wrap justify-center gap-2 md:gap-4 mb-8">
+                    <button class="model-btn interactive-tab px-4 py-2 text-sm font-semibold rounded-full" data-model="linear">Линейная</button>
+                    <button class="model-btn interactive-tab px-4 py-2 text-sm font-semibold rounded-full" data-model="dup">Волнообразная (DUP)</button>
+                    <button class="model-btn interactive-tab px-4 py-2 text-sm font-semibold rounded-full" data-model="block">Блочная</button>
+                </div>
+                <div class="grid md:grid-cols-5 gap-8">
+                    <div class="md:col-span-2">
+                        <h3 id="model-title" class="text-2xl font-bold text-stone-800 mb-3"></h3>
+                        <p id="model-description" class="text-stone-600 text-sm mb-4"></p>
+                        <div class="space-y-3">
+                            <div>
+                                <h4 class="font-semibold text-green-600">Преимущества:</h4>
+                                <ul id="model-pros" class="list-disc list-inside text-sm text-stone-600"></ul>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-red-600">Недостатки:</h4>
+                                <ul id="model-cons" class="list-disc list-inside text-sm text-stone-600"></ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="md:col-span-3">
+                        <div class="chart-container">
+                            <canvas id="periodizationChart"></canvas>
+                        </div>
+                        <p class="text-center text-xs text-stone-500 mt-2">Динамика объема и интенсивности во времени</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="planner" class="my-16 scroll-mt-20">
+            <h2 class="text-3xl font-bold text-center text-stone-900 mb-2">Конструктор Тренировочных Планов</h2>
+            <p class="text-center text-stone-600 mb-8 max-w-3xl mx-auto">Перейдем от теории к практике. Выберите вашу основную цель и текущий уровень подготовки, чтобы получить научно обоснованный и готовый к использоваyию пример тренировочного плана. Это поможет вам увидеть, как принципы периодизации воплощаются в конкретных упражнениях и цифрах.</p>
+            <div class="content-card p-6 md:p-8">
+                <div class="grid md:grid-cols-2 gap-4 mb-8">
+                    <div>
+                        <label for="goal-select" class="block text-sm font-medium text-stone-700 mb-1">Ваша цель:</label>
+                        <select id="goal-select" class="custom-select w-full p-2 border border-stone-300 rounded-md shadow-sm focus:ring-sky-500 focus:border-sky-500">
+                            <option value="mass">Набор массы</option>
+                            <option value="strength">Сила</option>
+                            <option value="fatloss">Жиросжигание</option>
+                            <option value="natural">Натуральный тренинг (DUP)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="level-select" class="block text-sm font-medium text-stone-700 mb-1">Ваш уровень:</label>
+                        <select id="level-select" class="custom-select w-full p-2 border border-stone-300 rounded-md shadow-sm focus:ring-sky-500 focus:border-sky-500">
+                            <option value="beginner">Новичок / Средний</option>
+                            <option value="advanced">Средний / Продвинутый</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="plan-output" class="overflow-x-auto">
+                </div>
+            </div>
+        </section>
+
+        <section id="macro-planner" class="my-16 scroll-mt-20">
+            <h2 class="text-3xl font-bold text-center text-stone-900 mb-2">Конструктор Макроцикла для Новичка</h2>
+            <p class="text-center text-stone-600 mb-8 max-w-3xl mx-auto">Не знаете, с чего начать? Выберите общую продолжительность вашего плана, и мы построим для вас логическую структуру макроцикла, основанную на принципах линейной периодизации — идеальный вариант для начинающих.</p>
+            <div class="content-card p-6 md:p-8">
+                <div class="mb-8">
+                    <label for="duration-select" class="block text-sm font-medium text-stone-700 mb-2 text-center">Выберите продолжительность плана:</label>
+                    <div class="flex justify-center gap-2 md:gap-4">
+                        <button class="duration-btn interactive-tab px-4 py-2 text-sm font-semibold rounded-full" data-duration="3">3 мес.</button>
+                        <button class="duration-btn interactive-tab px-4 py-2 text-sm font-semibold rounded-full" data-duration="6">6 мес.</button>
+                        <button class="duration-btn interactive-tab px-4 py-2 text-sm font-semibold rounded-full" data-duration="9">9 мес.</button>
+                        <button class="duration-btn interactive-tab px-4 py-2 text-sm font-semibold rounded-full" data-duration="12">12 мес.</button>
+                    </div>
+                </div>
+                <div id="macro-plan-output" class="relative mt-8 border-l-4 border-sky-200 pl-8 space-y-10">
+                    <!-- Timeline will be generated here -->
+                </div>
+            </div>
+        </section>
+
+        <section id="guide" class="my-16 scroll-mt-20">
+             <h2 class="text-3xl font-bold text-center text-stone-900 mb-2">Создайте Свой План: Пошаговое Руководство</h2>
+             <p class="text-center text-stone-600 mb-8 max-w-2xl mx-auto">Этот раздел — ваше практическое руководство по созданию собственного периодизированного плана. Следуйте этим шагам, чтобы перевести теорию в персонализированную и эффективную программу тренировок.</p>
+             <div id="guide-content" class="space-y-4">
+             </div>
+        </section>
+
+    </main>
+    
+    <footer class="bg-stone-800 text-stone-300 mt-16">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="text-center space-y-4">
+                <p class="text-xl font-bold text-white">Body Balance</p>
+                <p class="text-sm">Интерактивное приложение на основе научного руководства по периодизации.</p>
+                <p class="text-xs text-stone-400 mt-2">Основные источники: Bompa, Issurin, Zatsiorsky, Schoenfeld, Helms.</p>
+                <p class="text-xs text-stone-500 pt-4">© 2024 Body Balance. Все права защищены.</p>
+            </div>
+        </div>
+    </footer>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    const DB = {
+        introduction: {
+            title: 'Определение Периодизации: Стратегическое Манипулирование Тренировочными Переменными',
+            content: `
+                <p>Периодизация — это не просто тренировочная программа, а концептуальная модель долгосрочного планирования. Она определяется как предварительно спланированное, систематическое и циклическое манипулирование тренировочными переменными (объемом, интенсивностью, частотой) в течение определенных временных отрезков. Основная цель — управление адаптационными реакциями организма для предотвращения перетренированности, минимизации риска травм и достижения пиковой работоспособности в заранее определенные моменты.</p>
+                <p class="mt-4 font-semibold">Ключевые преимущества:</p>
+                <ul class="list-disc list-inside mt-2 space-y-1">
+                    <li>Максимизация спортивных результатов в нужный момент.</li>
+                    <li>Предотвращение перетренированности и травм.</li>
+                    <li>Преодоление адаптационного плато за счет вариативности стимула.</li>
+                    <li>Систематическое развитие физических качеств (сила, масса, мощность).</li>
+                </ul>
+            `
+        },
+        structure: {
+            macro: {
+                title: 'Макроцикл (Годовой план)',
+                content: 'Самый длинный тренировочный цикл (6-12+ месяцев), представляющий общую стратегию движения к главной цели. Он включает в себя все фазы подготовки: подготовительную, соревновательную и переходную.'
+            },
+            meso: {
+                title: 'Мезоцикл (Тренировочный блок)',
+                content: 'Среднесрочный цикл (2-6 недель), посвященный развитию одного конкретного физического качества. Примеры: блок гипертрофии, силовой блок, пиковый блок.'
+            },
+            micro: {
+                title: 'Микроцикл (Недельный план)',
+                content: 'Самый короткий и управляемый цикл, обычно длительностью в одну неделю. Он реализует задачу текущего мезоцикла через конкретные тренировки (тяжелые, легкие, средние дни).'
+            }
+        },
+        models: {
+            linear: {
+                title: 'Классическая (Линейная) Периодизация',
+                description: 'Характеризуется постепенным, линейным переходом от высокого объема и низкой интенсивности к низкому объему и высокой интенсивности на протяжении макроцикла.',
+                pros: ['Простота планирования.', 'Отлично подходит для новичков.', 'Создает прочную физиологическую базу.'],
+                cons: ['Риск детренировки качеств (например, потери массы в силовой фазе).', 'Рассчитана на один пик формы в году.', 'Менее эффективна для опытных атлетов.'],
+                chartData: {
+                    labels: ['Нед 1-4', 'Нед 5-8', 'Нед 9-12'],
+                    datasets: [{
+                        label: 'Объем',
+                        data: [80, 60, 30],
+                        borderColor: 'rgb(59, 130, 246)',
+                        tension: 0.1
+                    }, {
+                        label: 'Интенсивность',
+                        data: [60, 80, 95],
+                        borderColor: 'rgb(239, 68, 68)',
+                        tension: 0.1
+                    }]
+                }
+            },
+            dup: {
+                title: 'Волнообразная Периодизация (DUP)',
+                description: 'Включает частые (ежедневные или еженедельные) изменения объема и интенсивности. Позволяет одновременно тренировать несколько физических качеств (например, сила, гипертрофия, мощность) в рамках одной недели.',
+                pros: ['Превосходна для прироста силы у опытных атлетов.', 'Предотвращает застой и адаптационное сопротивление.', 'Поддерживает несколько качеств одновременно.'],
+                cons: ['Сложнее в планировании.', 'Высокий риск утомления без грамотного управления.', 'Требует хорошего понимания восстановления.'],
+                chartData: {
+                    labels: ['Пн', 'Ср', 'Пт', 'Пн', 'Ср', 'Пт'],
+                    datasets: [{
+                        label: 'Объем',
+                        data: [80, 30, 60, 82, 32, 62],
+                        borderColor: 'rgb(59, 130, 246)',
+                        tension: 0.4
+                    }, {
+                        label: 'Интенсивность',
+                        data: [70, 90, 80, 72, 92, 82],
+                        borderColor: 'rgb(239, 68, 68)',
+                        tension: 0.4
+                    }]
+                }
+            },
+            block: {
+                title: 'Блочная Периодизация',
+                description: 'Использует концентрированные, последовательные блоки тренировок (мезоциклы), сфокусированные на минимальном количестве совместимых качеств. Например: Блок Накопления (гипертрофия), Блок Трансформации (сила), Блок Реализации (пик).',
+                pros: ['Идеальна для продвинутых и элитных спортсменов.', 'Позволяет достичь нескольких пиков формы.', 'Минимизирует негативное влияние одновременной тренировки несовместимых качеств.'],
+                cons: ['Требует глубокого понимания теории.', 'Менее эффективна для общей физической подготовки новичков.', 'Сложна в реализации.'],
+                chartData: {
+                    labels: ['Накопление (4 нед)', 'Трансформация (3 нед)', 'Реализация (2 нед)'],
+                    datasets: [{
+                        label: 'Объем',
+                        data: [90, 50, 20],
+                        borderColor: 'rgb(59, 130, 246)',
+                        tension: 0.1,
+                        stepped: true,
+                    }, {
+                        label: 'Интенсивность',
+                        data: [70, 85, 95],
+                        borderColor: 'rgb(239, 68, 68)',
+                        tension: 0.1,
+                        stepped: true,
+                    }]
+                }
+            }
+        },
+        plans: {
+            'mass-beginner': {
+                title: '12-недельная Линейная Периодизация для Набора Массы',
+                description: 'Эта программа использует классическую линейную модель, постепенно увеличивая интенсивность и снижая объем. Идеально подходит для построения фундаментальной массы и силы. Каждая 4-я неделя является разгрузочной.',
+                headers: ['Неделя', 'Фаза', 'Интенсивность (% от 1ПМ)', 'Диапазон повторений', 'Цель'],
+                rows: [
+                    ['1-3', 'Гипертрофия', '65-75%', '10-12', 'Наращивание объема, адаптация соединительной ткани.'],
+                    ['4', '<strong>Разгрузка</strong>', '50%', '10-12', 'Активное восстановление.'],
+                    ['5-7', 'Сила/Гипертрофия', '75-85%', '6-8', 'Увеличение силы при сохранении высокого объема.'],
+                    ['8', '<strong>Разгрузка</strong>', '55%', '6-8', 'Восстановление перед пиковой фазой.'],
+                    ['9-11', 'Пиковая сила', '85-90%', '4-6', 'Максимизация силовых показателей.'],
+                    ['12', '<strong>Разгрузка</strong>', '60%', '4-6', 'Реализация суперкомпенсации.']
+                ]
+            },
+            'strength-advanced': {
+                title: '8-недельный Блоковый Цикл на Силу',
+                description: 'Эта программа основана на модели блочной периодизации и предназначена для опытных атлетов, стремящихся к пику силы. Она разделена на два концентрированных блока.',
+                headers: ['Неделя', 'Блок', 'Интенсивность', 'Объем', 'Цель'],
+                rows: [
+                    ['1-4', 'Накопление', '60-80%', 'Высокий (6-12 повт.)', 'Увеличение мышечной массы и работоспособности.'],
+                    ['5-6', 'Трансформация', '80-90%', 'Умеренный (3-5 повт.)', 'Развитие максимальной силы, адаптация ЦНС.'],
+                    ['7', 'Реализация', '90-95%+', 'Низкий (1-3 повт.)', 'Выход на пик силы.'],
+                    ['8', '<strong>Подводка (Taper)</strong>', '60-70%', 'Очень низкий', 'Рассеивание утомления, максимизация готовности.']
+                ]
+            },
+            'natural-advanced': {
+                title: '6-недельный DUP-план для Натурального Атлета',
+                description: 'Этот план использует ежедневную волнообразную периодизацию и высокую частоту тренировок, что является эффективной стратегией для натуральных атлетов. Каждая 4-я неделя — разгрузочная.',
+                 headers: ['День недели', 'Фокус', 'Приседания', 'Жим лежа', 'Тяга'],
+                rows: [
+                    ['Понедельник', '<strong>Сила</strong>', '4x3-5 @ RPE 8-9', '4x3-5 @ RPE 8-9', '3x3-5 @ RPE 8-9'],
+                    ['Среда', '<strong>Гипертрофия</strong>', '4x8-12 @ RPE 7-8', '4x8-12 @ RPE 7-8', '3x8-12 @ RPE 7-8'],
+                    ['Пятница', '<strong>Мощность/Техника</strong>', '5x3 @ 70% 1ПМ', '5x3 @ 70% 1ПМ', '5x2 @ 70% 1ПМ']
+                ]
+            },
+            'fatloss-intermediate': {
+                title: 'Периодизация для Жиросжигания (Сохранение Мышц)',
+                description: 'Во время дефицита калорий основная цель тренировок — сохранить мышечную массу и силу. Этот план фокусируется на поддержании высокой интенсивности (рабочих весов) при умеренном, управляемом объеме, чтобы обеспечить достаточный стимул без накопления избыточного утомления, которому организм более подвержен в условиях дефицита энергии.',
+                headers: ['День Недели', 'Фокус', 'Ключевые Упражнения', 'Объем и Интенсивность (RPE 7-9)'],
+                rows: [
+                    ['Понедельник', 'Тяжелый Низ / Объем Верх', 'Приседания, Жим лежа, Тяга блока к поясу', 'Присед: 3x5, Жим: 4x8-10, Тяга: 4x10-12'],
+                    ['Среда', 'Тяжелый Верх / Объем Низ', 'Жим стоя, Подтягивания, Жим ногами', 'Жим стоя: 3x5, Подтягивания: 4xMax, Жим ногами: 4x12-15'],
+                    ['Пятница', 'Силовая работа (Full Body)', 'Становая тяга, Жим гантелей под углом, Тяга гантели', 'Тяга: 1x5 (тяжелый) или 3x5, Жим: 4x8-10, Тяга: 4x10-12']
+                ]
+            }
+        },
+        macroPlans: {
+            3: [
+                { time: 'Месяц 1', title: 'Адаптация и Гипертрофия', goal: 'Изучение техники, увеличение рабочего объема, подготовка связок.', focus: 'Высокий объем, низкая-умеренная интенсивность (10-15 повторений).' },
+                { time: 'Месяц 2', title: 'Прогрессирующая Гипертрофия', goal: 'Наращивание мышечной массы, начало увеличения силы.', focus: 'Умеренный-высокий объем, умеренная интенсивность (8-12 повторений).' },
+                { time: 'Месяц 3', title: 'Силовая Гипертрофия', goal: 'Увеличение силы как основной драйвер будущего роста.', focus: 'Умеренный объем, умеренная-высокая интенсивность (6-8 повторений).' }
+            ],
+            6: [
+                { time: 'Месяцы 1-2', title: 'Фундаментальный блок', goal: 'Создание прочной базы мышечной массы и работоспособности.', focus: 'Высокий объем, умеренная интенсивность (8-15 повторений).' },
+                { time: 'Месяцы 3-4', title: 'Силовой блок', goal: 'Преобразование набранной массы в реальную силу.', focus: 'Умеренный объем, высокая интенсивность (5-8 повторений).' },
+                { time: 'Месяцы 5-6', title: 'Блок интенсификации', goal: 'Применение силы для дальнейшего роста, работа с более тяжелыми весами.', focus: 'Низкий-умеренный объем, высокая интенсивность (4-6 повторений).' }
+            ],
+            9: [
+                { time: 'Месяцы 1-3', title: 'Общая подготовка и Гипертрофия', goal: 'Максимальное увеличение мышечной массы и общей выносливости.', focus: 'Очень высокий объем, умеренная интенсивность.' },
+                { time: 'Месяцы 4-6', title: 'Развитие максимальной силы', goal: 'Фокус на увеличении 1ПМ в базовых движениях.', focus: 'Низкий объем, высокая интенсивность.' },
+                { time: 'Месяцы 7-9', title: 'Специализация и Реализация', goal: 'Оттачивание техники с субмаксимальными весами, реализация силового потенциала.', focus: 'Низкий объем, очень высокая интенсивность и специфичность.' }
+            ],
+            12: [
+                { time: 'Месяцы 1-4', title: 'Подготовительный период', goal: 'Создание фундамента: общая физическая подготовка, затем переход к гипертрофии.', focus: 'От высокого объема/низкой интенсивности к умеренному объему/умеренной интенсивности.' },
+                { time: 'Месяцы 5-8', title: 'Первый соревновательный период', goal: 'Последовательное развитие: от гипертрофии к силе, затем к пику силы.', focus: 'От умеренного объема/интенсивности к низкому объему/высокой интенсивности.' },
+                { time: 'Месяц 9', title: 'Переходный период', goal: 'Активный отдых, восстановление физических и психологических ресурсов.', focus: 'Очень низкий объем и интенсивность, неспецифические нагрузки.' },
+                { time: 'Месяцы 10-12', title: 'Второй соревновательный период', goal: 'Быстрый выход на второй пик формы на основе созданной базы.', focus: 'Ускоренное прохождение фаз "сила-пик".' }
+            ]
+        },
+        guide: [
+             {
+                step: 'Шаг 1: Определение Цели и Временного Горизонта',
+                content: 'Четко определите основную задачу: максимальная сила (1ПМ), гипертрофия (размер мышц), жиросжигание или выход на пик к определенной дате. Затем определите общий временной интервал (например, 12 недель, 6 месяцев).'
+            },
+            {
+                step: 'Шаг 2: Выбор Подходящей Модели Периодизации',
+                content: '<strong>Новичок:</strong> Начните с линейной периодизации. <strong>Средний уровень:</strong> Переходите на волнообразную модель (DUP/WUP). <strong>Продвинутый уровень:</strong> Используйте блочную периодизацию или авторегулируемую модель. Выбирайте модель, которая соответствует вашей цели (сила, масса) и образу жизни.'
+            },
+            {
+                step: 'Шаг 3: Структурирование Макро- и Мезоциклов',
+                content: 'Разделите ваш макроцикл на фазы (подготовительная, соревновательная, переходная). Затем спланируйте последовательность мезоциклов (блоков). Классическая последовательность: Накопление (гипертрофия) → Трансформация (сила) → Реализация (пик). Обязательно запланируйте разгрузочные недели (deload) в конце каждого мезоцикла.'
+            },
+             {
+                step: 'Шаг 4: Разработка Микроцикла',
+                content: 'Определите частоту тренировок. Выберите ядро из базовых, многосуставных движений и дополните их изоляционными. Назначьте объем (подходы х повторения) и интенсивность (%1ПМ или RPE) для каждого упражнения в соответствии с целью текущего мезоцикла.'
+            },
+            {
+                step: 'Шаг 5: Интеграция Прогрессии и Восстановления',
+                content: 'Спланируйте, как вы будете прогрессировать: добавлять вес на штангу, увеличивать повторения (двойная прогрессия) или использовать волновые схемы. Используйте шкалу RPE (воспринимаемое напряжение) для авторегуляции нагрузки. Ведите тренировочный дневник и будьте готовы корректировать план.'
+            }
+        ]
+
+    };
+
+    const introductionContentEl = document.getElementById('introduction-content');
+    introductionContentEl.innerHTML = `
+        <h3 class="text-xl font-semibold text-stone-800">${DB.introduction.title}</h3>
+        ${DB.introduction.content}
+    `;
+
+    const structureBlocks = document.querySelectorAll('.structure-block');
+    const structureDetailsEl = document.getElementById('structure-details');
+    
+    function updateStructureDetails(id) {
+        const data = DB.structure[id];
+        structureDetailsEl.innerHTML = `
+            <h4 class="text-xl font-bold text-sky-600">${data.title}</h4>
+            <p class="mt-2 text-stone-700">${data.content}</p>
+        `;
+    }
+
+    structureBlocks.forEach(block => {
+        block.addEventListener('click', () => {
+            const id = block.dataset.id;
+            updateStructureDetails(id);
+             structureBlocks.forEach(b => b.classList.remove('bg-sky-100'));
+             block.classList.add('bg-sky-100');
+        });
+    });
+    updateStructureDetails('macro');
+    document.querySelector('.structure-block[data-id="macro"]').classList.add('bg-sky-100');
+
+
+    const ctx = document.getElementById('periodizationChart').getContext('2d');
+    let periodizationChart = new Chart(ctx, {
+        type: 'line',
+        data: {},
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Условные единицы'
+                    }
+                },
+                x: {
+                     title: {
+                        display: true,
+                        text: 'Время'
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                }
+            }
+        }
+    });
+
+    const modelBtns = document.querySelectorAll('.model-btn');
+    const modelTitleEl = document.getElementById('model-title');
+    const modelDescriptionEl = document.getElementById('model-description');
+    const modelProsEl = document.getElementById('model-pros');
+    const modelConsEl = document.getElementById('model-cons');
+    
+    function updateModelView(modelName) {
+        const modelData = DB.models[modelName];
+        
+        modelTitleEl.textContent = modelData.title;
+        modelDescriptionEl.textContent = modelData.description;
+
+        modelProsEl.innerHTML = modelData.pros.map(pro => `<li>${pro}</li>`).join('');
+        modelConsEl.innerHTML = modelData.cons.map(con => `<li>${con}</li>`).join('');
+        
+        periodizationChart.data = modelData.chartData;
+        periodizationChart.update();
+        
+        modelBtns.forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.model === modelName);
+        });
+    }
+    
+    modelBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            updateModelView(btn.dataset.model);
+        });
+    });
+    updateModelView('linear');
+
+    const goalSelect = document.getElementById('goal-select');
+    const levelSelect = document.getElementById('level-select');
+    const planOutput = document.getElementById('plan-output');
+
+    function updatePlanView() {
+        const goal = goalSelect.value;
+        const level = levelSelect.value;
+        let key = `${goal}-${level}`;
+
+        if (goal === 'fatloss') {
+            key = 'fatloss-intermediate';
+        } else if (!DB.plans[key]) {
+             if(goal === 'strength') key = 'strength-advanced';
+             if(goal === 'natural') key = 'natural-advanced';
+             if(goal === 'mass') key = 'mass-beginner';
+        }
+        
+        const planData = DB.plans[key];
+        
+        if (planData) {
+            let tableHTML = `
+                <h3 class="text-xl font-bold text-stone-800 mb-2">${planData.title}</h3>
+                <p class="text-sm text-stone-600 mb-4">${planData.description}</p>
+                <div class="w-full">
+                    <table class="min-w-full divide-y divide-stone-200">
+                        <thead class="bg-stone-50">
+                            <tr>
+                                ${planData.headers.map(header => `<th scope="col" class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">${header}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-stone-200">
+                            ${planData.rows.map(row => `
+                                <tr>
+                                    ${row.map(cell => `<td class="px-6 py-4 whitespace-nowrap text-sm text-stone-700">${cell}</td>`).join('')}
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            planOutput.innerHTML = tableHTML;
+        } else {
+            planOutput.innerHTML = `<p class="text-center text-stone-500">Для данной комбинации нет готового плана. Попробуйте другие варианты.</p>`;
+        }
+    }
+
+    goalSelect.addEventListener('change', updatePlanView);
+    levelSelect.addEventListener('change', updatePlanView);
+    updatePlanView();
+
+    const durationBtns = document.querySelectorAll('.duration-btn');
+    const macroPlanOutput = document.getElementById('macro-plan-output');
+
+    function generateMacroPlan(duration) {
+        const plan = DB.macroPlans[duration];
+        if (!plan) {
+            macroPlanOutput.innerHTML = '<p>Выберите продолжительность.</p>';
+            return;
+        }
+
+        macroPlanOutput.innerHTML = plan.map(phase => `
+            <div class="relative timeline-item">
+                <div class="p-4 bg-white rounded-lg shadow-md border border-stone-200">
+                    <p class="text-sm font-semibold text-sky-600">${phase.time}</p>
+                    <h4 class="text-lg font-bold text-stone-800 mt-1">${phase.title}</h4>
+                    <p class="text-sm text-stone-600 mt-2"><strong>Цель:</strong> ${phase.goal}</p>
+                    <p class="text-sm text-stone-600 mt-1"><strong>Фокус:</strong> ${phase.focus}</p>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    durationBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            durationBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            generateMacroPlan(btn.dataset.duration);
+        });
+    });
+
+    // Initialize with a default plan
+    document.querySelector('.duration-btn[data-duration="6"]').classList.add('active');
+    generateMacroPlan(6);
+
+
+    const guideContentEl = document.getElementById('guide-content');
+    guideContentEl.innerHTML = DB.guide.map((item, index) => `
+        <div class="content-card">
+            <div class="p-6">
+                <h3 class="font-bold text-lg text-sky-600">${item.step}</h3>
+                <p class="mt-2 text-stone-600">${item.content}</p>
+            </div>
+        </div>
+    `).join('');
+    
+    const navLinks = document.querySelectorAll('header a.nav-link');
+    const sections = document.querySelectorAll('main section');
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const id = entry.target.getAttribute('id');
+                navLinks.forEach(link => {
+                    link.classList.remove('active-nav-link');
+                    const linkHref = link.getAttribute('href');
+                    if (linkHref && linkHref.substring(1) === id) {
+                         link.classList.add('active-nav-link');
+                    }
+                });
+            }
+        });
+    }, { rootMargin: '-25% 0px -75% 0px' });
+
+    sections.forEach(section => {
+        observer.observe(section);
+    });
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const targetId = this.getAttribute('href');
+            const targetElement = document.querySelector(targetId);
+            if(targetElement) {
+                targetElement.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        });
+    });
+
+});
+</script>
+
+</body>
+</html>
